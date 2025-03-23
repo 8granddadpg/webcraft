@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3D Movement with Three.js</title>
+    <title>scrapped fake mc</title>
     <style>
       body {
         margin: 0;
@@ -29,48 +29,26 @@
       scene.add(light);
 
       const blocks = [];
-
       function generateTerrain() {
-        const terrainHeight = 5;
         for (let x = -50; x < 50; x++) {
           for (let z = -50; z < 50; z++) {
-            let height = Math.floor(Math.random() * terrainHeight);
-            const blockGeometry = new THREE.BoxGeometry(1, height, 1);
-            const blockMaterial = new THREE.MeshBasicMaterial({ color: getBlockColor(height) });
-            const block = new THREE.Mesh(blockGeometry, blockMaterial);
+            let height = Math.floor(Math.random() * 5);
+            const block = new THREE.Mesh(new THREE.BoxGeometry(1, height, 1), new THREE.MeshBasicMaterial({ color: height < 2 ? 0x8B4513 : height < 4 ? 0x228B22 : 0xA9A9A9 }));
             block.position.set(x, height / 2, z);
             scene.add(block);
             blocks.push(block);
           }
         }
       }
-
-      function getBlockColor(height) {
-        if (height < 2) return 0x8B4513;
-        else if (height < 4) return 0x228B22;
-        return 0xA9A9A9;
-      }
-
       generateTerrain();
 
       const controls = new THREE.PointerLockControls(camera, renderer.domElement);
-      document.body.addEventListener('click', () => {
-        controls.lock();
-      });
-
+      document.body.addEventListener('click', () => controls.lock());
       scene.add(controls.getObject());
 
-      const speed = 0.1;
-      const velocity = new THREE.Vector3();
-      let isMovingForward = false;
-      let isMovingBackward = false;
-      let isMovingLeft = false;
-      let isMovingRight = false;
-      let isJumping = false;
-      let isFalling = false;
-      const gravity = -0.05;
-      const jumpHeight = 0.8;
-      let verticalSpeed = 0;
+      const speed = 0.1, gravity = -0.05, jumpHeight = 0.8;
+      let verticalSpeed = 0, isMovingForward = false, isMovingBackward = false, isMovingLeft = false, isMovingRight = false, isJumping = false, isFalling = true;
+      const playerBox = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
 
       document.addEventListener('keydown', (event) => {
         if (event.key === 'w') isMovingForward = true;
@@ -82,7 +60,6 @@
           verticalSpeed = jumpHeight;
         }
       });
-
       document.addEventListener('keyup', (event) => {
         if (event.key === 'w') isMovingForward = false;
         if (event.key === 's') isMovingBackward = false;
@@ -92,43 +69,22 @@
 
       function checkBlockCollisions() {
         const playerPosition = controls.getObject().position;
-        const playerBox = new THREE.Box3().setFromObject(controls.getObject());
+        playerBox.setFromCenterAndSize(playerPosition, new THREE.Vector3(1, 2, 1));
         let onGround = false;
 
         blocks.forEach(block => {
           const blockBox = new THREE.Box3().setFromObject(block);
-          
           if (playerBox.intersectsBox(blockBox)) {
-            if (playerPosition.y <= block.position.y + 0.5 && playerPosition.y > block.position.y) {
-              if (verticalSpeed <= 0) {
-                isFalling = false;
-                isJumping = false;
-                verticalSpeed = 0;
-                playerPosition.y = block.position.y + 1;
-                onGround = true;
-              }
-            }
-
-            if (playerBox.intersectsBox(blockBox)) {
-              if (isMovingForward) {
-                playerPosition.z = block.position.z + 1;
-              }
-              if (isMovingBackward) {
-                playerPosition.z = block.position.z - 1;
-              }
-              if (isMovingLeft) {
-                playerPosition.x = block.position.x + 1;
-              }
-              if (isMovingRight) {
-                playerPosition.x = block.position.x - 1;
-              }
+            if (playerPosition.y <= block.position.y + 1 && verticalSpeed <= 0) {
+              isFalling = false;
+              isJumping = false;
+              verticalSpeed = 0;
+              playerPosition.y = block.position.y + 1;
+              onGround = true;
             }
           }
         });
-
-        if (!onGround) {
-          isFalling = true;
-        }
+        if (!onGround) isFalling = true;
       }
 
       function setInitialCameraPosition() {
@@ -139,20 +95,13 @@
 
       function animate() {
         requestAnimationFrame(animate);
-
         if (isMovingForward) controls.moveForward(speed);
         if (isMovingBackward) controls.moveForward(-speed);
         if (isMovingLeft) controls.moveRight(-speed);
         if (isMovingRight) controls.moveRight(speed);
-
-        if (isFalling) {
-          verticalSpeed += gravity;
-        }
-
-        controls.getObject().position.y += verticalSpeed;
-
         checkBlockCollisions();
-
+        if (isFalling) verticalSpeed += gravity;
+        controls.getObject().position.y += verticalSpeed;
         renderer.render(scene, camera);
       }
 

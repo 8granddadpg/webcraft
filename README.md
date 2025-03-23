@@ -1,0 +1,121 @@
+# Hello, this repository has been officially scrapped.
+Scrapped? What does that mean? Yes, it means that i completely stopped working on this
+Didnt last so long did it ;-;, I really never knew how exhausted i would be trying to code this. hasnt been one day and look at that.
+**i wanted to stop..**
+# Scrapped HTML
+You can still play the scrapped [here](https://8granddadpg.github.io/webcraft/)
+Although, it is bad and boring, if you would like to make it better or modify it, you can go [here](https://github.com/8granddadpg/webcraft/blob/main/index.html)
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>scrapped fake mc</title>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        cursor: none;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.141.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.141.0/examples/js/controls/PointerLockControls.js"></script>
+    <script>
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const light = new THREE.AmbientLight(0xFFFFFF, 1);
+      scene.add(light);
+
+      const blocks = [];
+      function generateTerrain() {
+        for (let x = -50; x < 50; x++) {
+          for (let z = -50; z < 50; z++) {
+            let height = Math.floor(Math.random() * 5);
+            const block = new THREE.Mesh(new THREE.BoxGeometry(1, height, 1), new THREE.MeshBasicMaterial({ color: height < 2 ? 0x8B4513 : height < 4 ? 0x228B22 : 0xA9A9A9 }));
+            block.position.set(x, height / 2, z);
+            scene.add(block);
+            blocks.push(block);
+          }
+        }
+      }
+      generateTerrain();
+
+      const controls = new THREE.PointerLockControls(camera, renderer.domElement);
+      document.body.addEventListener('click', () => controls.lock());
+      scene.add(controls.getObject());
+
+      const speed = 0.1, gravity = -0.05, jumpHeight = 0.8;
+      let verticalSpeed = 0, isMovingForward = false, isMovingBackward = false, isMovingLeft = false, isMovingRight = false, isJumping = false, isFalling = true;
+      const playerBox = new THREE.Box3(new THREE.Vector3(), new THREE.Vector3());
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'w') isMovingForward = true;
+        if (event.key === 's') isMovingBackward = true;
+        if (event.key === 'a') isMovingLeft = true;
+        if (event.key === 'd') isMovingRight = true;
+        if (event.key === ' ' && !isJumping && !isFalling) {
+          isJumping = true;
+          verticalSpeed = jumpHeight;
+        }
+      });
+      document.addEventListener('keyup', (event) => {
+        if (event.key === 'w') isMovingForward = false;
+        if (event.key === 's') isMovingBackward = false;
+        if (event.key === 'a') isMovingLeft = false;
+        if (event.key === 'd') isMovingRight = false;
+      });
+
+      function checkBlockCollisions() {
+        const playerPosition = controls.getObject().position;
+        playerBox.setFromCenterAndSize(playerPosition, new THREE.Vector3(1, 2, 1));
+        let onGround = false;
+
+        blocks.forEach(block => {
+          const blockBox = new THREE.Box3().setFromObject(block);
+          if (playerBox.intersectsBox(blockBox)) {
+            if (playerPosition.y <= block.position.y + 1 && verticalSpeed <= 0) {
+              isFalling = false;
+              isJumping = false;
+              verticalSpeed = 0;
+              playerPosition.y = block.position.y + 1;
+              onGround = true;
+            }
+          }
+        });
+        if (!onGround) isFalling = true;
+      }
+
+      function setInitialCameraPosition() {
+        const highestPoint = Math.max(...blocks.map(block => block.position.y));
+        camera.position.set(0, highestPoint + 10, 0);
+        camera.lookAt(new THREE.Vector3(0, highestPoint, 0));
+      }
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (isMovingForward) controls.moveForward(speed);
+        if (isMovingBackward) controls.moveForward(-speed);
+        if (isMovingLeft) controls.moveRight(-speed);
+        if (isMovingRight) controls.moveRight(speed);
+        checkBlockCollisions();
+        if (isFalling) verticalSpeed += gravity;
+        controls.getObject().position.y += verticalSpeed;
+        renderer.render(scene, camera);
+      }
+
+      setInitialCameraPosition();
+      animate();
+    </script>
+  </body>
+</html>
+```

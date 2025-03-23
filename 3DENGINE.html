@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3DENGINE</title>
+    <title>3D Movement with Three.js</title>
     <style>
       body {
         margin: 0;
@@ -21,21 +21,37 @@
     <script>
       const scene = new THREE.Scene();
       const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-      camera.position.set(0, 1.5, 0);
-
       const renderer = new THREE.WebGLRenderer();
       renderer.setSize(window.innerWidth, window.innerHeight);
       document.body.appendChild(renderer.domElement);
 
-      const floorGeometry = new THREE.PlaneGeometry(100, 100);
-      const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xAAAAAA, side: THREE.DoubleSide });
-      const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.y = -1;
-      scene.add(floor);
-
       const light = new THREE.AmbientLight(0xFFFFFF, 1);
       scene.add(light);
+
+      const blocks = [];
+
+      function generateTerrain() {
+        const terrainHeight = 5;
+        for (let x = -50; x < 50; x++) {
+          for (let z = -50; z < 50; z++) {
+            let height = Math.floor(Math.random() * terrainHeight);
+            const blockGeometry = new THREE.BoxGeometry(1, height, 1);
+            const blockMaterial = new THREE.MeshBasicMaterial({ color: getBlockColor(height) });
+            const block = new THREE.Mesh(blockGeometry, blockMaterial);
+            block.position.set(x, height / 2, z);
+            scene.add(block);
+            blocks.push(block);
+          }
+        }
+      }
+
+      function getBlockColor(height) {
+        if (height < 2) return 0x8B4513;
+        else if (height < 4) return 0x228B22;
+        return 0xA9A9A9;
+      }
+
+      generateTerrain();
 
       const controls = new THREE.PointerLockControls(camera, renderer.domElement);
       document.body.addEventListener('click', () => {
@@ -51,7 +67,6 @@
       let isMovingLeft = false;
       let isMovingRight = false;
       let isJumping = false;
-
       let isFalling = false;
       const gravity = -0.05;
       const jumpHeight = 0.8;
@@ -75,16 +90,51 @@
         if (event.key === 'd') isMovingRight = false;
       });
 
-      function checkGroundCollision() {
+      function checkBlockCollisions() {
         const playerPosition = controls.getObject().position;
-        if (playerPosition.y <= floor.position.y + 1) {
-          isFalling = false;
-          isJumping = false;
-          verticalSpeed = 0;
-          controls.getObject().position.y = floor.position.y + 1;
-        } else {
+        const playerBox = new THREE.Box3().setFromObject(controls.getObject());
+        let onGround = false;
+
+        blocks.forEach(block => {
+          const blockBox = new THREE.Box3().setFromObject(block);
+          
+          if (playerBox.intersectsBox(blockBox)) {
+            if (playerPosition.y <= block.position.y + 0.5 && playerPosition.y > block.position.y) {
+              if (verticalSpeed <= 0) {
+                isFalling = false;
+                isJumping = false;
+                verticalSpeed = 0;
+                playerPosition.y = block.position.y + 1;
+                onGround = true;
+              }
+            }
+
+            if (playerBox.intersectsBox(blockBox)) {
+              if (isMovingForward) {
+                playerPosition.z = block.position.z + 1;
+              }
+              if (isMovingBackward) {
+                playerPosition.z = block.position.z - 1;
+              }
+              if (isMovingLeft) {
+                playerPosition.x = block.position.x + 1;
+              }
+              if (isMovingRight) {
+                playerPosition.x = block.position.x - 1;
+              }
+            }
+          }
+        });
+
+        if (!onGround) {
           isFalling = true;
         }
+      }
+
+      function setInitialCameraPosition() {
+        const highestPoint = Math.max(...blocks.map(block => block.position.y));
+        camera.position.set(0, highestPoint + 10, 0);
+        camera.lookAt(new THREE.Vector3(0, highestPoint, 0));
       }
 
       function animate() {
@@ -101,11 +151,12 @@
 
         controls.getObject().position.y += verticalSpeed;
 
-        checkGroundCollision();
+        checkBlockCollisions();
 
         renderer.render(scene, camera);
       }
 
+      setInitialCameraPosition();
       animate();
     </script>
   </body>
